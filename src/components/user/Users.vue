@@ -9,12 +9,23 @@
     <el-card>
       <el-row :gutter="20">
         <el-col :span="8">
-          <el-input placeholder="请输入内容">
-            <el-button slot="append" icon="el-icon-search"></el-button>
+          <el-input
+            placeholder="请输入内容"
+            v-model="queryInto.query"
+            clearable
+            @clear="getUserList()"
+          >
+            <el-button
+              slot="append"
+              icon="el-icon-search"
+              @click="getUserList()"
+            ></el-button>
           </el-input>
         </el-col>
         <el-col :span="4">
-          <el-button type="primary">添加用户</el-button>
+          <el-button type="primary" @click="addDialogVisible = true"
+            >添加用户</el-button
+          >
         </el-col>
       </el-row>
       <el-table :data="userList" border stripe>
@@ -25,7 +36,11 @@
         <el-table-column label="角色" prop="role_name"> </el-table-column>
         <el-table-column label="状态">
           <div slot-scope="scope">
-            <el-switch v-model="scope.row.mg_state"> </el-switch>
+            <el-switch
+              v-model="scope.row.mg_state"
+              @change="userStateChanged(scope.row)"
+            >
+            </el-switch>
           </div>
         </el-table-column>
         <el-table-column label="操作" width="180px">
@@ -74,17 +89,28 @@
         </el-table-column>
       </el-table>
 
-      <!-- <el-pagination
+      <el-pagination
         @size-change="handleSizeChange"
         @current-change="handleCurrentChange"
-        :current-page="currentPage4"
-        :page-sizes="[100, 200, 300, 400]"
-        :page-size="100"
+        :current-page="queryInto.pagenum"
+        :page-sizes="[1, 2, 5, 10]"
+        :page-size="queryInto.pagesize"
         layout="total, sizes, prev, pager, next, jumper"
-        :total="400"
+        :total="total"
       >
-      </el-pagination> -->
+      </el-pagination>
     </el-card>
+    <!-- 添加用户 -->
+    <el-dialog title="提示" :visible.sync="addDialogVisible" width="50%">
+      <!-- 内容主体区 -->
+      <span>这是一段信息</span>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="addDialogVisible = false">取 消</el-button>
+        <el-button type="primary" @click="addDialogVisible = false"
+          >确 定</el-button
+        >
+      </span>
+    </el-dialog>
   </div>
 </template>
 
@@ -95,10 +121,11 @@ export default {
       queryInto: {
         query: '',
         pagenum: 1,
-        pagesize: 2,
+        pagesize: 10,
       },
       userList: [],
       total: 0,
+      addDialogVisible: false,
     }
   },
   methods: {
@@ -113,6 +140,29 @@ export default {
       this.total = res.data.total
       console.log(res)
       //   console.log(this.userList)
+    },
+    handleSizeChange(newSize) {
+      console.log(newSize)
+      this.queryInto.pagesize = newSize
+      this.getUserList()
+    },
+    handleCurrentChange(newPage) {
+      console.log(newPage)
+      this.queryInto.pagenum = newPage
+      this.getUserList()
+    },
+    //改变状态
+    async userStateChanged(userinfo) {
+      // console.log(userinfo)
+      const { data: res } = await this.$http.put(
+        `users/${userinfo.id}/state/${userinfo.mg_state}`
+      )
+      console.log(res)
+      if (res.meta.status !== 200) {
+        userinfo.mg_state = !userinfo.mg_state
+        return this.$message.error('更新用户状态失败')
+      }
+      this.$message.success('更新用户状态成功')
     },
   },
   created() {
